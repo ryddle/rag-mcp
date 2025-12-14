@@ -13,9 +13,10 @@ A Model Context Protocol (MCP) server that provides RAG (Retrieval-Augmented Gen
 ## Prerequisites
 
 - Python 3.10+
-- [Ollama](https://ollama.ai) running locally
+- **Embedding Provider** (choose one):
+  - [Ollama](https://ollama.ai) running locally, OR
+  - [LMStudio](https://lmstudio.ai) running locally
 - [Qdrant](https://qdrant.tech) running (e.g., via Docker)
-- nomic-embed-text model pulled in Ollama: `ollama pull nomic-embed-text`
 
 ### Start Qdrant with Docker
 
@@ -23,18 +24,51 @@ A Model Context Protocol (MCP) server that provides RAG (Retrieval-Augmented Gen
 docker run -p 6333:6333 -p 6334:6334 -v qdrant_storage:/qdrant/storage qdrant/qdrant
 ```
 
+### Setup Embedding Provider
+
+**Option A: Using Ollama**
+```bash
+# Pull the embedding model
+ollama pull nomic-embed-text
+
+# Start Ollama (if not already running)
+ollama serve
+```
+
+**Option B: Using LMStudio**
+1. Open LMStudio
+2. Download an embedding model (e.g., `nomic-embed-text-v1.5`)
+3. Start the Local Server on port 1234
+4. Load the embedding model
+
 ## Installation
 
 1. Clone the repository:
 ```bash
 git clone <your-repo>
-cd rag-mcp
+### For Ollama:
+```env
+# Qdrant Configuration
+QDRANT_URL=http://localhost:6333
+
+# Embedding Provider
+EMBEDDING_PROVIDER=ollama
+EMBEDDING_BASE_URL=http://localhost:11434
+EMBEDDING_MODEL=nomic-embed-text
+
+# Default Collection
+DEFAULT_COLLECTION=documents
 ```
 
-2. Install dependencies:
-```bash
-pip install -e .
-```
+### For LMStudio:
+```env
+# Qdrant Configuration
+QDRANT_URL=http://localhost:6333
+
+# Embedding Provider
+EMBEDDING_PROVIDER=lmstudio
+EMBEDDING_BASE_URL=http://localhost:1234
+EMBEDDING_MODEL=text-embedding-nomic-embed-text-v1.5
 
 3. Configure environment (optional):
 ```bash
@@ -123,21 +157,42 @@ Delete a collection from Qdrant. ⚠️ Use with caution!
 **Parameters:**
 - `collection` (string, required): Collection name to delete
 
-## Usage
+## Usage MCP
 
-### Running the Server
+Add to your LMStudio MCP configuration:
 
-The server uses stdio for communication (MCP standard):
-
-```bash
-python -m src.server
+**Using Ollama for embeddings:**
+```json
+{
+  "mcpServers": {
+    "rag": {
+      "command": "python",
+      "args": ["-m", "src.server"],
+      "cwd": "/path/to/rag-mcp",
+      "env": {
+        "QDRANT_URL": "http://localhost:6333",
+        "EMBEDDING_PROVIDER": "ollama",
+        "EMBEDDING_BASE_URL": "http://localhost:11434",
+        "EMBEDDING_MODEL": "nomic-embed-text"
+      }
+    }
+  }
+}
 ```
 
-### Testing with MCP Inspector
-
-```bash
-npx @modelcontextprotocol/inspector python -m src.server
-```
+**Using LMStudio for embeddings:**
+```json
+{
+  "mcpServers": {
+    "rag": {
+      "command": "python",
+      "args": ["-m", "src.server"],
+      "cwd": "/path/to/rag-mcp",
+      "env": {
+        "QDRANT_URL": "http://localhost:6333",
+        "EMBEDDING_PROVIDER": "lmstudio",
+        "EMBEDDING_BASE_URL": "http://localhost:1234",
+        "EMBEDDING_MODEL": "text-embedding-nomic-embed-text-v1.5
 
 ### Using with LMStudio
 
@@ -177,18 +232,27 @@ Add to your LMStudio MCP configuration:
 2. **Search for relevant information:**
 ```python
 # Use search tool
-{
-  "query": "What is MCP?",
-  "limit": 2
-}
-```
+{Embedding Provider Issues
 
-3. **Manage collections:**
-```python
-# Use list_collections tool to see all collections
-# Use delete_collection to remove unwanted collections
-```
+**Ollama:**
+- Ensure Ollama is running: `ollama serve`
+- Check the model is pulled: `ollama list`
+- Verify `EMBEDDING_BASE_URL` is correct (default: `http://localhost:11434`)
 
+**LMStudio:**
+- Ensure LMStudio Local Server is running
+- Verify the embedding model is loaded in LMStudio
+- Check `EMBEDDING_BASE_URL` is correct (default: `http://localhost:1234`)
+- Ensure CORS is enabled if needed
+
+### Qdrant Connection Issues
+- Ensure Qdrant is running on port 6333
+- Check Docker logs: `docker logs <qdrant-container-id>`
+- Verify `QDRANT_URL` is correct
+
+### Embedding Errors
+- nomic-embed-text requires task prefixes (handled automatically)
+- Make sure `EMBEDDING_PROVIDER` is set correctly ("ollama" or "lmstudio"
 ## Development
 
 ### Project Structure

@@ -11,7 +11,8 @@ from qdrant_client.models import Distance, VectorParams, PointStruct
 
 # Configuration
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+EMBEDDING_BASE_URL = os.getenv("EMBEDDING_BASE_URL", "http://localhost:11434")
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "ollama")  # "ollama" or "lmstudio"
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 EMBEDDING_DIM = 768  # nomic-embed-text dimension
 
@@ -21,7 +22,7 @@ qdrant = QdrantClient(url=QDRANT_URL)
 
 async def get_embedding(text: str, task_prefix: str = "search_document") -> List[float]:
     """
-    Get embedding for text using Ollama.
+    Get embedding for text using Ollama or LMStudio.
     
     Args:
         text: Text to embed
@@ -37,16 +38,30 @@ async def get_embedding(text: str, task_prefix: str = "search_document") -> List
         prefixed_text = text
     
     async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(
-            f"{OLLAMA_BASE_URL}/api/embeddings",
-            json={
-                "model": EMBEDDING_MODEL,
-                "prompt": prefixed_text
-            }
-        )
-        response.raise_for_status()
-        data = response.json()
-        return data["embedding"]
+        if EMBEDDING_PROVIDER.lower() == "lmstudio":
+            # LMStudio uses OpenAI-compatible API
+            response = await client.post(
+                f"{EMBEDDING_BASE_URL}/v1/embeddings",
+                json={
+                    "model": EMBEDDING_MODEL,
+                    "input": prefixed_text
+                }
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["data"][0]["embedding"]
+        else:
+            # Ollama API
+            response = await client.post(
+                f"{EMBEDDING_BASE_URL}/api/embeddings",
+                json={
+                    "model": EMBEDDING_MODEL,
+                    "prompt": prefixed_text
+                }
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["embedding"]
 
 
 async def ensure_collection(collection_name: str) -> None:

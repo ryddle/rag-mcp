@@ -11,7 +11,8 @@ import mcp.server.stdio
 
 # Configuration from environment variables
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+EMBEDDING_BASE_URL = os.getenv("EMBEDDING_BASE_URL", "http://localhost:11434")
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "ollama")  # "ollama" or "lmstudio"
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 DEFAULT_COLLECTION = os.getenv("DEFAULT_COLLECTION", "documents")
 
